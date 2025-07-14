@@ -27,10 +27,13 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@huggingface/transformers": "^3.6.3",
+    "@lancedb/lancedb": "^0.21.1",
     "@langchain/community": "^0.3.48",
     "@langchain/core": "^0.3.62",
     "@prisma/client": "^6.11.1",
     "@types/express": "^5.0.3",
+    "apache-arrow": "^21.0.0",
     "dotenv": "^17.2.0",
     "express": "^5.1.0",
     "zod": "^4.0.5"

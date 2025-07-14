@@ -1,4 +1,3 @@
-import { array, string } from 'zod';
 import prisma from '../prisma';
 
 export class BibleDataIngestion{
