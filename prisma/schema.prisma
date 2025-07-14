@@ -1,0 +1,25 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Verses {
+  id                 String    @id @map("_id")
+  reference          String 
+  text               String
+  book_name          String
+  book_number        Int
+  chapter            Int
+  verse              Int
+  text_length        Int
+  embedding_id       String
+  created_at         DateTime  @default(now())
+  index              Int
+
+  @@map("verses")
+}
