@@ -95,14 +95,11 @@ export class RagService {
         }
     }
 
-    // async run_rag () {
-    //     console.log("Running rag!");
+    async vector_search(query: string) {
+        console.log("Running vector search!");  
 
-    //     const embedding_model = await this.intialize_emebedding_model();
-    //     const vector_store = await this.initialize_vector_store();
-    //     const embedding = await this.create_embeddings_from_mongodb(embedding_model)
-    //     const update_vector_table = await this.update_vector_table(vector_store.table, embedding)
-    // }
+        console.log("Convertiiin")
+    }
 
     async run_rag() {
         console.log("Running rag!");
