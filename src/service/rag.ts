@@ -3,7 +3,7 @@ import prisma from '../prisma';
 import { HuggingFaceTransformersEmbeddings } from "@langchain/community/embeddings/huggingface_transformers";
 import * as lancedb from "@lancedb/lancedb";
 import * as arrow from "apache-arrow";
-// import { string } from 'zod';
+
 
 export class RagService {
 
@@ -84,10 +84,21 @@ export class RagService {
         }
     }
 
-    async update_vector_table(table: any, data: any) {
+    async update_vector_table(table: any, data: any, forceRefresh: boolean = false) {
         console.log("Updating vector table!");
 
         try {
+            const existingCount = await table.countRows();
+
+            if (existingCount && !forceRefresh) {
+                console.log(`Table already contains records. Skipping insertion.`);
+                return;
+            }
+
+            if (existingCount > 0 && forceRefresh) {
+                console.log(`Clearing table before inserting new data.`);
+            }
+
             await table.add(data);
             console.log("Vector table updated successfully!");
         } catch (error) {
@@ -95,13 +106,22 @@ export class RagService {
         }
     }
 
-    async vector_search(query: string) {
-        console.log("Running vector search!");  
+    async vector_search(model: any, query: string, table: any) {
+        console.log("Converting the query to embeddings!");
 
-        console.log("Convertiiin")
+        const query_vector = await model.embedQuery(query);
+        
+        console.log("Performing vector search!");
+
+        const res = await table.search(query_vector).limit(5).toArray();
+
+        const verses = res.map((result: any) => `${result.reference}: ${result.text}`).join('\n\n');
+        console.log(verses);
+        return verses;
     }
 
-    async run_rag() {
+    // put a query parameter in the run_rag function
+    async run_rag(prompt: string) {
         console.log("Running rag!");
 
         const embedding_model = await this.intialize_emebedding_model();
@@ -117,6 +137,10 @@ export class RagService {
         
         if (embeddings) {
             await this.update_vector_table(vector_store.table, embeddings);
+            return await this.vector_search(embedding_model, prompt, vector_store.table);
+        } else {
+            console.log("Failed to create embeddings, skipping vector search.");
         }
+
     }
 }
