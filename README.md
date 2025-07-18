@@ -23,7 +23,7 @@ Prayer RAG takes your prayer requests and generates heartfelt, biblical prayers 
 - **📦 Deployment:** Docker ready
 
 ## Architecture
-![Logo](https://photos.app.goo.gl/fp3jgCNiv6hQ8x4M7)
+![Logo](./images/WhatsApp%20Image%202025-07-07%20at%2022.33.02_2ca09f2a.jpg)
 
 ```
 User Request → Embedding Model → Vector Search → Bible Verses → LLM → Generated Prayer
