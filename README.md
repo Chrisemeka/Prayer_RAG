@@ -25,10 +25,6 @@ Prayer RAG takes your prayer requests and generates heartfelt, biblical prayers 
 ## Architecture
 ![Logo](./images/WhatsApp%20Image%202025-07-07%20at%2022.33.02_2ca09f2a.jpg)
 
-```
-User Request → Embedding Model → Vector Search → Bible Verses → LLM → Generated Prayer
-```
-
 ### The Flow
 1. **Data Ingestion:** Bible verses → Chunking → MongoDB → Vector embeddings → LanceDB
 2. **Prayer Generation:** User prompt → Semantic search → Relevant verses → AI prayer
