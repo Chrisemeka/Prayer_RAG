@@ -4,12 +4,12 @@ generator client {
 }
 
 datasource db {
-  provider = "mongodb"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./prayer_verses.db"
 }
 
 model Verses {
-  id                 String    @id @map("_id")
+  id                 String    @id
   reference          String 
   text               String
   book_name          String
