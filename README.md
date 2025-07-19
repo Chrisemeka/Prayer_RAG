@@ -18,15 +18,14 @@ Prayer RAG takes your prayer requests and generates heartfelt, biblical prayers 
 
 - **🧠 AI/ML:** HuggingFace Transformers.js, Groq LLM (Llama3-8b)
 - **🔍 Vector Storage and Search:** LanceDB with sentence-transformers/all-MiniLM-L6-v2
-- **💾 JSON Bible File Database:** MongoDB with Prisma ORM
+- **💾 JSON Bible File Database:** SQLite with Prisma ORM
 - **🌐 Backend:** Node.js, Express, TypeScript
-- **📦 Deployment:** Docker ready
 
 ## Architecture
 ![Logo](./images/WhatsApp%20Image%202025-07-07%20at%2022.33.02_2ca09f2a.jpg)
 
 ### The Flow
-1. **Data Ingestion:** Bible verses → Chunking → MongoDB → Vector embeddings → LanceDB
+1. **Data Ingestion:** Bible verses → Chunking → SQLite → Vector embeddings → LanceDB
 2. **Prayer Generation:** User prompt → Semantic search → Relevant verses → AI prayer
 
 ## Key Code Snippets
@@ -66,7 +65,7 @@ const completion = await this.groq.chat.completions.create({
 
 ### Prerequisites
 - Node.js (v18+)
-- MongoDB instance
+- SQLite instance
 - Groq API key
 
 ### Installation
