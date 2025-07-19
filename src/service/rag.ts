@@ -57,30 +57,77 @@ export class RagService {
         }
     }
 
-    async create_embeddings_from_mongodb(model: any) {
-        console.log("Creating embeddings from mongodb!");
+   async create_embeddings_from_sqlite(model: any) {
+    console.log("Creating embeddings from mongodb!");
 
         try {
             const verses = await prisma.verses.findMany({});
-
-            const data = await Promise.all(verses.map( async(verse: any) => {
-                const clean_text = verse.text.replace(/[^a-zA-Z0-9\s]/g, '');
-                const vector = await model.embedQuery(clean_text);
-                return {
-                    id: verse.id,
-                    vector: vector,
-                    text: verse.text,
-                    reference: verse.reference,
-                    book_name: verse.book_name,
-                    chapter: verse.chapter,
-                    verse: verse.verse
+            console.log(`📊 Total verses to process: ${verses.length}`);
+            
+            // Check for cached embeddings first
+            const cacheFile = './data/embeddings_cache.json';
+            
+            try {
+                const fs = require('fs').promises;
+                const cachedData = await fs.readFile(cacheFile, 'utf8');
+                const cached = JSON.parse(cachedData);
+                
+                if (cached.length === verses.length) {
+                    console.log(`Found complete cached embeddings (${cached.length})!`);
+                    return cached;
+                } else {
+                    console.log(`Cache incomplete (${cached.length}/${verses.length}), recreating...`);
                 }
-            }))
+            } catch (error) {
+                console.log("📝 No cache found, creating fresh embeddings...");
+            }
 
-            console.log("Embeddings created successfully!");
-            return data
+            // Create embeddings with progress tracking
+            const batchSize = 50;
+            const allData = [];
+            const totalBatches = Math.ceil(verses.length / batchSize);
+            
+            console.log(`Processing in ${totalBatches} batches of ${batchSize}...`);
+            
+            for (let i = 0; i < verses.length; i += batchSize) {
+                const batch = verses.slice(i, i + batchSize);
+                const batchNum = Math.floor(i/batchSize) + 1;
+                
+                console.log(`Processing batch ${batchNum}/${totalBatches} (${i + 1}-${Math.min(i + batchSize, verses.length)})`);
+                
+                const batchData = await Promise.all(batch.map(async (verse: any) => {
+                    const clean_text = verse.text.replace(/[^a-zA-Z0-9\s]/g, '');
+                    const vector = await model.embedQuery(clean_text);
+                    return {
+                        id: verse.id,
+                        vector: vector,
+                        text: verse.text,
+                        reference: verse.reference,
+                        book_name: verse.book_name,
+                        chapter: verse.chapter,
+                        verse: verse.verse
+                    }
+                }));
+                
+                allData.push(...batchData);
+            
+                
+                // Small delay to prevent system overload
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // Cache the results
+            console.log("Caching embeddings for future use...");
+            const fs = require('fs').promises;
+            
+            // Ensure data directory exists
+            await fs.mkdir('./data', { recursive: true });
+            await fs.writeFile(cacheFile, JSON.stringify(allData, null, 2));
+            
+            console.log("Embeddings created and cached successfully!");
+            return allData;
         } catch (error) {
-            console.error("Error creating embeddings from mongodb: ", error)
+            console.error("Error creating embeddings from mongodb: ", error);
         }
     }
 
@@ -127,20 +174,23 @@ export class RagService {
         const embedding_model = await this.intialize_emebedding_model();
         const vector_store = await this.initialize_vector_store();
         
-        // Check if both are not null
         if (!embedding_model || !vector_store) {
             console.log("Failed to initialize embedding model or vector store");
             return;
         }
         
-        const embeddings = await this.create_embeddings_from_mongodb(embedding_model);
+        // Check if vector table has data
+        const existingCount = await vector_store.table.countRows();
         
-        if (embeddings) {
-            await this.update_vector_table(vector_store.table, embeddings);
-            return await this.vector_search(embedding_model, prompt, vector_store.table);
-        } else {
-            console.log("Failed to create embeddings, skipping vector search.");
+        if (existingCount === 0) {
+            console.log("Vector table is empty! Please run setup first:");
+            console.log("npx ts-node src/scripts/setup_embeddings.ts");
+            return "Please run the setup script first to initialize embeddings.";
         }
-
+        
+        console.log(`Using ${existingCount} pre-computed vectors`);
+        
+        // Fast vector search (no embedding creation needed)
+        return await this.vector_search(embedding_model, prompt, vector_store.table);
     }
 }

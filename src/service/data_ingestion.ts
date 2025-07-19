@@ -41,8 +41,8 @@ export class BibleDataIngestion{
         }
     }
 
-    async upload_verses_to_mongodb(verses: any): Promise<any> {
-        console.log("Uploading data to mongodb...");
+    async upload_verses_to_sqlite(verses: any): Promise<any> {
+        console.log("Uploading data to sqlite...");
 
         // transform all the verses in the bible data to mongodb documents
         const mongodb_docs = await this.transform_data_to_verses(verses);
@@ -63,9 +63,9 @@ export class BibleDataIngestion{
 
                 console.log(`Uploaded: ${total_inserted}/${mongodb_docs.length}`)
             }
-            console.log(`Succesfully uploaded ${total_inserted} verses in MongoDB!`)
+            console.log(`Succesfully uploaded ${total_inserted} verses in Sqlite!`)
         } catch (error) {
-            console.error("Error uploading data to mongodb: ", error)
+            console.error("Error uploading data to sqlite: ", error)
         }
     }
 
@@ -73,6 +73,6 @@ export class BibleDataIngestion{
         const bible_data = await this.loadBibleDataJson('./data/bible_data.json');  
 
 
-        const verses = await this.upload_verses_to_mongodb(bible_data.verses);
+        const verses = await this.upload_verses_to_sqlite(bible_data.verses);
     }
 }
