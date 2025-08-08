@@ -5,7 +5,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./prayer_verses.db"
+  url      = "file:./rag_data.db"
 }
 
 model Verses {
@@ -22,4 +22,13 @@ model Verses {
   index              Int
 
   @@map("verses")
+}
+
+model Therapy_Manual {
+  id                 String    @id
+  title              String
+  content            String
+  created_at         DateTime  @default(now())
+
+  @@map("therapy_manual")
 }

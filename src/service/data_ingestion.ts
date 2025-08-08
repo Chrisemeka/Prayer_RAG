@@ -1,4 +1,5 @@
 import prisma from '../prisma';
+import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 
 export class BibleDataIngestion{
 
@@ -44,24 +45,24 @@ export class BibleDataIngestion{
     async upload_verses_to_sqlite(verses: any): Promise<any> {
         console.log("Uploading data to sqlite...");
 
-        // transform all the verses in the bible data to mongodb documents
-        const mongodb_docs = await this.transform_data_to_verses(verses);
+        // transform all the verses in the bible data to sqlite rows
+        const sqlite_rows = await this.transform_data_to_verses(verses);
         
         
 
         try {
-            // batch upload into MongoDB in batches of 1000
+            // batch upload into Sqlite in batches of 1000
             const batch_size = 1000;
             let total_inserted = 0;
 
-            for (let i = 0; i < mongodb_docs.length; i += batch_size){
-                const batch = mongodb_docs.slice(i, i + batch_size);
+            for (let i = 0; i < sqlite_rows.length; i += batch_size){
+                const batch = sqlite_rows.slice(i, i + batch_size);
                 const verses = await prisma.verses.createMany({
                     data: batch
                 });
                 total_inserted += batch.length
 
-                console.log(`Uploaded: ${total_inserted}/${mongodb_docs.length}`)
+                console.log(`Uploaded: ${total_inserted}/${sqlite_rows.length}`)
             }
             console.log(`Succesfully uploaded ${total_inserted} verses in Sqlite!`)
         } catch (error) {
@@ -69,10 +70,47 @@ export class BibleDataIngestion{
         }
     }
 
+    async loadAndUploadTherapyManual(filepath: string): Promise<any> {
+        try {
+            const loader = new PDFLoader(filepath, {
+            });
+
+            const docs = await loader.load();
+
+            const therapyData = docs.map((doc, index) => {
+                const docId = `therapy_technique_${index +1}`
+                const title = doc.pageContent.split('\n')[0].trim().toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, '_');
+
+                return {
+                    id: docId,
+                    title: title,
+                    content: doc.pageContent
+                }
+            })
+
+            const uploadData = await prisma.therapy_Manual.createMany({
+                data: therapyData
+            });
+
+            console.log("Uploaded Therapy Techniques Successfully!");
+            return uploadData;
+
+        } catch (error) {
+            console.error("Error loading therapy manual data: ", error)
+            return null
+        }
+    }
+
+    async upload_therapy_manual_to_sqlite(docs: JSON){
+
+    }
+
     async run_ingestion(){
         const bible_data = await this.loadBibleDataJson('./data/bible_data.json');  
 
 
         const verses = await this.upload_verses_to_sqlite(bible_data.verses);
+
+        const therapy_techniques = await this.loadAndUploadTherapyManual('./data/therapy_techiniques.pdf')
     }
 }

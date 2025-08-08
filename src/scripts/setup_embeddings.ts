@@ -5,26 +5,30 @@ async function setupEmbeddingsOnce() {
     
     const rag = new RagService();
     const model = await rag.intialize_emebedding_model();
-    const vectorStore = await rag.initialize_vector_store();
+    const verseVectorStore = await rag.initialize_verses_vector_store();
+    const therapyVectorStore = await rag.initialize_therapy_vector_store();
     
-    if (!model || !vectorStore) {
+    if (!model || !verseVectorStore || !therapyVectorStore) {
         console.log("Failed to initialize components");
         return;
     }
     
-    const existingCount = await vectorStore.table.countRows();
+    const verseExistingCount = await verseVectorStore.table.countRows();
+    const therapyExistingCount = await therapyVectorStore.table.countRows();
     
-    if (existingCount > 0) {
-        console.log(`Found ${existingCount} existing embeddings. Setup already complete!`);
+    if (verseExistingCount && therapyExistingCount > 0) {
+        console.log(`Found existing embeddings. Setup already complete!`);
         return;
     }
     
     // Continue with embedding creation...
     console.log("Creating embeddings...");
-    const embeddings = await rag.create_embeddings_from_sqlite(model);
+    const verseEmbeddings = await rag.create_verse_embeddings_from_sqlite(model);
+    const therapyEmbeddings = await rag.create_therapy_embeddings_from_sqlite(model);
     
-    if (embeddings) {
-        await rag.update_vector_table(vectorStore.table, embeddings, true);
+    if (verseEmbeddings || therapyEmbeddings) {
+        await rag.update_vector_table(verseVectorStore.table, verseEmbeddings, true);
+        await rag.update_vector_table(therapyVectorStore.table, therapyEmbeddings, true);
         console.log("Setup complete!");
     }
 }
