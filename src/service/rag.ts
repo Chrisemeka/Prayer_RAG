@@ -23,7 +23,7 @@ export class RagService {
         }
     }
 
-    async initialize_vector_store() {
+    async initialize_verses_vector_store() {
         console.log("Loading vector store!");
 
         try {
@@ -49,7 +49,7 @@ export class RagService {
                 console.log("Created new table");
             }
 
-            console.log("Vector store loaded successfully!");
+            console.log("Verse vector store loaded successfully!");
             return { db, table };
         } catch (error) {
             console.log("Error loading vector store: ", error);
@@ -57,32 +57,45 @@ export class RagService {
         }
     }
 
-   async create_embeddings_from_sqlite(model: any) {
-    console.log("Creating embeddings from mongodb!");
+    async initialize_therapy_vector_store() {
+        console.log("Loading vector store!");
+
+        try {
+            const db = await lancedb.connect("./lancedb_data");
+            
+            let table;
+            
+            try {
+                table = await db.openTable("therapy_vector_db");
+                console.log("Opened existing table");
+            } catch (error) {
+                const schema = new arrow.Schema([
+                    new arrow.Field("vector", new arrow.FixedSizeList(384, new arrow.Field("item", new arrow.Float32()))),
+                    new arrow.Field("id", new arrow.Utf8()),
+                    new arrow.Field("title", new arrow.Utf8()),
+                    new arrow.Field("content", new arrow.Utf8())
+                ]);
+                
+                table = await db.createEmptyTable("therapy_vector_db", schema);
+                console.log("Created new table");
+            }
+
+            console.log("Therapy vector store loaded successfully!");
+            return { db, table };
+        } catch (error) {
+            console.log("Error loading vector store: ", error);
+            return null;
+        }
+    }
+
+   async create_verse_embeddings_from_sqlite(model: any) {
+    console.log("Creating verse embeddings from sqlite!");
 
         try {
             const verses = await prisma.verses.findMany({});
             console.log(`📊 Total verses to process: ${verses.length}`);
+                        
             
-            // Check for cached embeddings first
-            const cacheFile = './data/embeddings_cache.json';
-            
-            try {
-                const fs = require('fs').promises;
-                const cachedData = await fs.readFile(cacheFile, 'utf8');
-                const cached = JSON.parse(cachedData);
-                
-                if (cached.length === verses.length) {
-                    console.log(`Found complete cached embeddings (${cached.length})!`);
-                    return cached;
-                } else {
-                    console.log(`Cache incomplete (${cached.length}/${verses.length}), recreating...`);
-                }
-            } catch (error) {
-                console.log("📝 No cache found, creating fresh embeddings...");
-            }
-
-            // Create embeddings with progress tracking
             const batchSize = 50;
             const allData = [];
             const totalBatches = Math.ceil(verses.length / batchSize);
@@ -111,24 +124,42 @@ export class RagService {
                 
                 allData.push(...batchData);
             
-                
-                // Small delay to prevent system overload
-                await new Promise(resolve => setTimeout(resolve, 100));
             }
-
-            // Cache the results
-            console.log("Caching embeddings for future use...");
-            const fs = require('fs').promises;
             
-            // Ensure data directory exists
-            await fs.mkdir('./data', { recursive: true });
-            await fs.writeFile(cacheFile, JSON.stringify(allData, null, 2));
-            
-            console.log("Embeddings created and cached successfully!");
+            console.log("Verses embeddings created successfully!");
             return allData;
         } catch (error) {
-            console.error("Error creating embeddings from mongodb: ", error);
+            console.error("Error creating verses embeddings from sqlite: ", error);
         }
+    }
+
+    async create_therapy_embeddings_from_sqlite(model: any) {
+        const therapy = await prisma.therapy_Manual.findMany({})
+        console.log(`📊 Total therapy to process: ${therapy.length}`);
+
+
+        const allData = [];
+        for (let i = 0; i < therapy.length; i++ ) {
+            try {
+                const therapyData = await Promise.all(therapy.map(async (therapy: any) => {
+                const vector = await model.embedQuery(therapy.content);
+                    return {
+                        id: therapy.id,
+                        vector: vector,
+                        title: therapy.title,
+                        content: therapy.content
+                    }
+                }));
+
+                allData.push(...therapyData);
+
+                console.log("Therapy embeddings created successfully!");
+                return allData;
+            } catch (error) {
+                console.error("Error creating therapy embeddings from sqlite: ", error);
+            }
+        }
+
     }
 
     async update_vector_table(table: any, data: any, forceRefresh: boolean = false) {
@@ -167,12 +198,12 @@ export class RagService {
         return verses;
     }
 
-    // put a query parameter in the run_rag function
+    
     async run_rag(prompt: string) {
         console.log("Running rag!");
 
         const embedding_model = await this.intialize_emebedding_model();
-        const vector_store = await this.initialize_vector_store();
+        const vector_store = await this.initialize_verses_vector_store();
         
         if (!embedding_model || !vector_store) {
             console.log("Failed to initialize embedding model or vector store");
