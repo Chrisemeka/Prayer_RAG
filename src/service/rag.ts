@@ -52,8 +52,8 @@ export class RagService {
             console.log("Verse vector store loaded successfully!");
             return { db, table };
         } catch (error) {
-            console.log("Error loading vector store: ", error);
-            return null;
+            // console.log("Error loading vector store: ", error);
+            throw new Error("Error loading verse vector store: " + error);
         }
     }
 
@@ -83,8 +83,8 @@ export class RagService {
             console.log("Therapy vector store loaded successfully!");
             return { db, table };
         } catch (error) {
-            console.log("Error loading vector store: ", error);
-            return null;
+            // console.log("Error loading vector store: ", error);
+            throw new Error("Error loading therapy vector store: " + error);
         }
     }
 
@@ -184,44 +184,61 @@ export class RagService {
         }
     }
 
-    async vector_search(model: any, query: string, table: any) {
+    async verse_vector_search(model: any, query: string, table: any) {
         console.log("Converting the query to embeddings!");
 
         const query_vector = await model.embedQuery(query);
         
         console.log("Performing vector search!");
 
-        const res = await table.search(query_vector).limit(5).toArray();
+        const res = await table.search(query_vector).limit(10).toArray();
 
         const verses = res.map((result: any) => `${result.reference}: ${result.text}`).join('\n\n');
         console.log(verses);
         return verses;
     }
 
+    async therapy_vector_search(model: any, query: string, table: any) {
+        console.log("Converting the query to embeddings!");
+
+        const query_vector = await model.embedQuery(query);
+        
+        console.log("Performing vector search!");
+
+        const res = await table.search(query_vector).limit(10).toArray();
+
+        const therapy = res.map((result: any) => `${result.reference}: ${result.text}`).join('\n\n');
+        console.log(therapy);
+        return therapy;
+    }
+
+
     
     async run_rag(prompt: string) {
         console.log("Running rag!");
 
         const embedding_model = await this.intialize_emebedding_model();
-        const vector_store = await this.initialize_verses_vector_store();
+        const verse_vector_store = await this.initialize_verses_vector_store();
+        const therapy_vector_store = await this.initialize_therapy_vector_store();
         
-        if (!embedding_model || !vector_store) {
+        if (!embedding_model || !verse_vector_store || !therapy_vector_store) {
             console.log("Failed to initialize embedding model or vector store");
-            return;
         }
         
         // Check if vector table has data
-        const existingCount = await vector_store.table.countRows();
+        const verseExistingCount = await verse_vector_store.table.countRows();
+        const therapyExistingCount = await therapy_vector_store.table.countRows();
         
-        if (existingCount === 0) {
-            console.log("Vector table is empty! Please run setup first:");
+        if (verseExistingCount && therapyExistingCount === 0) {
+            console.log("Verse or Therapy vector table is empty! Please run setup first:");
             console.log("npx ts-node src/scripts/setup_embeddings.ts");
-            return "Please run the setup script first to initialize embeddings.";
+            console.log("Please run the setup script first to initialize embeddings.");
         }
         
-        console.log(`Using ${existingCount} pre-computed vectors`);
         
-        // Fast vector search (no embedding creation needed)
-        return await this.vector_search(embedding_model, prompt, vector_store.table);
+        const verse_result = await this.verse_vector_search(embedding_model, prompt, verse_vector_store.table);
+        const therapy_result = await this.therapy_vector_search(embedding_model, prompt, therapy_vector_store.table);
+
+        return {verse_result, therapy_result}
     }
 }
