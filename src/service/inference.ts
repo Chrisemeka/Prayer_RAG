@@ -19,6 +19,7 @@ export class Inference {
         });
     }
 
+    //this is the method where the error occurs from 
     async therapeutic_chat_response(prompt: string) {
         interface SentimentResult {
             label: string;
